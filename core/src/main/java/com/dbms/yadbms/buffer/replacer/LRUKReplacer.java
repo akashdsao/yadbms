@@ -58,7 +58,7 @@ public class LRUKReplacer {
      */
     public synchronized void setEvictable(FrameId frameId, boolean evictable) {
         if (!nodes.containsKey(frameId)) {
-            throw new RuntimeException("Illegal frame access");
+            throw new DBException(ErrorType.INVALID_FRAME_ID, "FrameId does not exist: " + frameId);
         }
         if (nodes.get(frameId).isEvictable() != evictable) {
             nodes.get(frameId).setEvictable(evictable);

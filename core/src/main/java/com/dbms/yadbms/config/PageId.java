@@ -1,18 +1,18 @@
 package com.dbms.yadbms.config;
 
-import static com.dbms.yadbms.config.Constants.DEFAULT_FRAME_ID;
+import static com.dbms.yadbms.config.Constants.DEFAULT_PAGE_ID;
 
-/* * ClassName: FrameId
+/* * ClassName: PageId
  * This class represents a unique identifier for a frame in the system.
  * It encapsulates an Integer value and provides methods to access it.
  */
-public class FrameId {
+public class PageId {
 
     private final Integer value;
 
-    public FrameId(Integer value) {
+    public PageId(Integer value) {
         if (value <= 0) {
-            value = DEFAULT_FRAME_ID;
+            value = DEFAULT_PAGE_ID;
         }
         this.value = value;
     }
