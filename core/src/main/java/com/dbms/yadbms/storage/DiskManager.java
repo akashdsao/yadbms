@@ -1,7 +1,7 @@
 package com.dbms.yadbms.storage;
 
-import com.dbms.yadbms.common.utils.DBException;
-import com.dbms.yadbms.common.utils.ErrorType;
+import com.dbms.yadbms.common.exceptions.DBException;
+import com.dbms.yadbms.common.exceptions.ErrorType;
 import com.dbms.yadbms.config.PageId;
 import lombok.Getter;
 

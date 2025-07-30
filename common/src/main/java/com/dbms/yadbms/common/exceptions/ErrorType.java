@@ -1,4 +1,4 @@
-package com.dbms.yadbms.common.utils;
+package com.dbms.yadbms.common.exceptions;
 
 public enum ErrorType {
     INVALID_ARGUMENT("INVALID_ARGUMENT", "The argument provided is invalid."),

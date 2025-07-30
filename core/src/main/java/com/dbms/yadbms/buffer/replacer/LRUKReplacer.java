@@ -1,7 +1,7 @@
 package com.dbms.yadbms.buffer.replacer;
 
-import com.dbms.yadbms.common.utils.DBException;
-import com.dbms.yadbms.common.utils.ErrorType;
+import com.dbms.yadbms.common.exceptions.DBException;
+import com.dbms.yadbms.common.exceptions.ErrorType;
 import com.dbms.yadbms.config.FrameId;
 
 import java.util.HashMap;

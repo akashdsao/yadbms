@@ -1,4 +1,4 @@
-package com.dbms.yadbms.common.utils;
+package com.dbms.yadbms.common.exceptions;
 
 public class DBException extends RuntimeException{
     private final String errorCode;
