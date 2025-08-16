@@ -1,9 +1,14 @@
-package com.dbms.yadbms.storage;
+package com.dbms.yadbms.storage.disk;
 
 import com.dbms.yadbms.common.utils.Channel;
 import com.dbms.yadbms.config.PageId;
 
 
+/**
+ * DiskScheduler is responsible for scheduling disk read/write requests.
+ * It uses a background thread to process requests asynchronously.
+ * All reads stops when a poison pill is received or the scheduler is shut down or the pageId overflows.
+ * */
 public class DiskScheduler {
 
     private final Channel<DiskRequest> requestChannel;
@@ -12,14 +17,14 @@ public class DiskScheduler {
 
     private final Thread backgroundThread;
 
-    private final DiskRequest POISON_PILL = new DiskRequest.DiskRequestBuilder().isWrite(false).data(null).pageId(new PageId(-1)).build();
+    private final DiskRequest poisonPill = DiskRequest.builder().isWrite(false).data(null).pageId(new PageId(Integer.MAX_VALUE)).build();
 
     public DiskScheduler(DiskManager diskManager) {
         this.diskManager = diskManager;
 
         requestChannel = new Channel<>();
-
         backgroundThread = new Thread(this::startWorkerThread);
+        backgroundThread.setName("DiskScheduler-Worker-Thread");
         backgroundThread.setDaemon(true);
         backgroundThread.start();
     }
@@ -33,7 +38,7 @@ public class DiskScheduler {
             while (true) {
                 DiskRequest request = requestChannel.get();
 
-                if (request == POISON_PILL) {
+                if (request == poisonPill) {
                     break;
                 }
                 processRequest(request);
@@ -57,7 +62,7 @@ public class DiskScheduler {
     }
 
     public void shutDown() {
-        schedule(POISON_PILL);
+        schedule(poisonPill);
         try {
             backgroundThread.join();
         } catch (InterruptedException e) {

@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+//TODO: This needs re-write
 public class LRUKReplacer {
 
     private final Map<FrameId, LRUKNode> nodes;
@@ -27,7 +28,7 @@ public class LRUKReplacer {
      *
      * @return an Optional containing the FrameId of the victim frame, or empty if no frame is available
      */
-    public synchronized Optional<FrameId> victim() {
+    public synchronized Optional<FrameId> evict() {
         Optional<FrameId> victimNode = Optional.empty();
         int maxDistance = 0;
         int oldestTimestamp = Integer.MAX_VALUE;

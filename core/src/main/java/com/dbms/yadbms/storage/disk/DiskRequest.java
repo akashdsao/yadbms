@@ -1,4 +1,4 @@
-package com.dbms.yadbms.storage;
+package com.dbms.yadbms.storage.disk;
 
 import com.dbms.yadbms.config.PageId;
 import lombok.Builder;

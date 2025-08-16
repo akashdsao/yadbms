@@ -60,4 +60,18 @@ public class Channel<T> {
             channelIOLock.unlock();
         }
     }
+
+    /**
+     * Checks if the channel is empty.
+     *
+     * @return true if the channel is empty, false otherwise
+     */
+    public boolean isEmpty() {
+        channelIOLock.lock();
+        try {
+            return q.isEmpty();
+        } finally {
+            channelIOLock.unlock();
+        }
+    }
 }

@@ -1,9 +1,10 @@
-package com.dbms.yadbms.storage;
+package com.dbms.yadbms.storage.disk;
 
 import com.dbms.yadbms.common.exceptions.DBException;
 import com.dbms.yadbms.common.exceptions.ErrorType;
 import com.dbms.yadbms.config.PageId;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,6 +24,7 @@ import static com.dbms.yadbms.config.Constants.PAGE_SIZE;
  * It handles reading and writing pages, allocating new pages, and managing free slots.
  * It also provides methods to write and read logs.
  */
+@Slf4j
 public class DiskManager {
 
     private final Path dbFilePath;
@@ -122,7 +124,7 @@ public class DiskManager {
                 logChannel.close();
             }
         } catch (IOException e) {
-            System.err.println("❌ Error closing channels: " + e.getMessage());
+            log.error("❌ Error closing channels: {}", e.getMessage());
         }
     }
 
@@ -144,7 +146,11 @@ public class DiskManager {
 
         try {
             ByteBuffer buffer = ByteBuffer.wrap(pageData);
-            dbChannel.write(buffer, offset);
+            int bytesWritten = dbChannel.write(buffer, offset);
+
+            if (bytesWritten == -1) {
+                log.error("Failed to write to {} pageId", pageId.getValue());
+            }
             numWrites++;
             pages.put(pageId, offset);
             dbChannel.force(true);
@@ -173,7 +179,7 @@ public class DiskManager {
 
             long fileSize = Files.size(dbFilePath);
             if (offset > fileSize) {
-                System.err.printf("I/O error: Read page %d past the end of file at offset %d%n", pageId, offset);
+                log.error("I/O error: Read page {} past the end of file at offset {}", pageId, offset);
                 return;
             }
 
@@ -183,17 +189,17 @@ public class DiskManager {
             int bytesRead = dbChannel.read(buffer, offset);
 
             if (bytesRead == -1) {
-                System.err.printf("I/O error: Unable to read page %d at offset %d%n", pageId, offset);
+                log.error("I/O error: Unable to read page {} at offset {}", pageId, offset);
                 return;
             }
 
             if (bytesRead < PAGE_SIZE) {
-                System.err.printf("Partial read: Page %d read %d bytes, filling rest with 0s%n", pageId, bytesRead);
-                Arrays.fill(pageData, bytesRead, (int) PAGE_SIZE, (byte) 0);
+                log.error("Partial read: Page {} read {} bytes, filling rest with 0s", pageId, bytesRead);
+                Arrays.fill(pageData, bytesRead, PAGE_SIZE, (byte) 0);
             }
 
         } catch (IOException e) {
-            System.err.printf("I/O exception while reading page %d: %s%n", pageId, e.getMessage());
+            log.error("I/O exception while reading page {}: {}", pageId, e.getMessage());
         }
     }
 
@@ -230,7 +236,7 @@ public class DiskManager {
 
             numFlushes += 1;
         } catch (IOException e) {
-            System.err.println("I/O error while writing log: " + e.getMessage());
+            log.error("I/O error while writing log: {}", e.getMessage());
         }
     }
 
@@ -247,24 +253,24 @@ public class DiskManager {
         try {
             long fileSize = Files.size(logFilePath);
             if (offset > fileSize) {
-                System.err.printf("I/O error: Read log at offset %d%n", offset);
+                log.error("I/O error: Read log at offset {}", offset);
                 return false;
             }
             ByteBuffer buffer = ByteBuffer.wrap(logData, 0, size);
             int bytesRead = logChannel.read(buffer, offset);
 
             if (bytesRead == -1) {
-                System.err.printf("I/O error: Unable to read log at offset %d%n", offset);
+                log.error("I/O error: Unable to read log at offset {}", offset);
                 return false;
             }
 
             if (bytesRead < size) {
-                System.err.printf("Partial read:  for log file size %s and bytes read %d", size, bytesRead);
-                Arrays.fill(logData, bytesRead, (int) PAGE_SIZE, (byte) 0);
+                log.error("Partial read:  for log file size {} and bytes read {}", size, bytesRead);
+                Arrays.fill(logData, bytesRead, PAGE_SIZE, (byte) 0);
             }
             return true;
         } catch (IOException e) {
-            System.err.printf("Unable to read log: %s", e.getMessage());
+            log.error("Unable to read log: {}", e.getMessage());
             return false;
         }
     }
@@ -287,7 +293,7 @@ public class DiskManager {
 
         if (pages.size() > pageCapacity) {
             pageCapacity *= 2;
-            long requiredSize = (long) (pageCapacity + 1) * PAGE_SIZE;
+            long requiredSize = (pageCapacity + 1) * PAGE_SIZE;
             dbChannel.truncate(requiredSize);
         }
 

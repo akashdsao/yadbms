@@ -2,9 +2,10 @@ package com.dbms.yadbms.config;
 
 import static com.dbms.yadbms.config.Constants.DEFAULT_FRAME_ID;
 
-/* * ClassName: FrameId
- * This class represents a unique identifier for a frame in the system.
- * It encapsulates an Integer value and provides methods to access it.
+/**
+ * FrameId represents a unique identifier for a frame in the buffer pool.
+ * It encapsulates an Integer value that identifies the frame.
+ * The FrameId is used to manage frames in the buffer pool, allowing for efficient access and replacement.
  */
 public class FrameId {
 
@@ -15,6 +16,10 @@ public class FrameId {
             value = DEFAULT_FRAME_ID;
         }
         this.value = value;
+    }
+
+    public static FrameId store(Integer value) {
+        return new FrameId(value);
     }
 
     /**
@@ -42,6 +47,28 @@ public class FrameId {
      * @return true if valid, false otherwise
      */
     public Boolean isValid() {
-        return value != null && value >= 0;
+        return value >= 0;
+    }
+
+    /**
+     * Two FrameId objects are considered equal if their Integer values are equal.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FrameId)) return false;
+        FrameId frameId = (FrameId) o;
+        return value.equals(frameId.value);
+    }
+
+    /**
+     * Returns the hash code for this FrameId.
+     * The hash code is based on the Integer value of the FrameId.
+     *
+     * @return the hash code
+     */
+    @Override
+    public int hashCode() {
+        return value.hashCode();
     }
 }

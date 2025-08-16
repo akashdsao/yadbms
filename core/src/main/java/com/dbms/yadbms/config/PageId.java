@@ -1,20 +1,30 @@
 package com.dbms.yadbms.config;
 
-import static com.dbms.yadbms.config.Constants.DEFAULT_PAGE_ID;
+import com.dbms.yadbms.common.exceptions.DBException;
+import com.dbms.yadbms.common.exceptions.ErrorType;
 
-/* * ClassName: PageId
- * This class represents a unique identifier for a frame in the system.
- * It encapsulates an Integer value and provides methods to access it.
+import java.util.Objects;
+
+/**
+ * Represents a unique identifier for a page in the database.
+ * A PageId is an immutable object that encapsulates an Integer value.
+ * It is used to identify pages in the buffer pool and disk storage.
+ * <p>
+ * A PageId is considered valid if its value is non-negative.
  */
 public class PageId {
 
     private final Integer value;
 
     public PageId(Integer value) {
-        if (value <= 0) {
-            value = DEFAULT_PAGE_ID;
+        if (value < 0) {
+            throw new DBException(ErrorType.INVALID_PAGE_ID, "PageId cannot be negative: " + value);
         }
         this.value = value;
+    }
+
+    public static PageId store(Integer value) {
+        return new PageId(value);
     }
 
     /**
@@ -42,6 +52,26 @@ public class PageId {
      * @return true if valid, false otherwise
      */
     public Boolean isValid() {
-        return value != null && value >= 0;
+        return value >= 0;
+    }
+
+    /**
+     * Two PageId objects are considered equal if their Integer values are equal.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PageId)) return false;
+        PageId pageId = (PageId) o;
+        return value.equals(pageId.value);
+    }
+
+    /**
+     * Returns the hash code of this PageId.
+     * The hash code is based on the Integer value of the PageId.
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
     }
 }

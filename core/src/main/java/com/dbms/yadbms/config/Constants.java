@@ -12,5 +12,7 @@ public final class Constants {
     /**
      * size of data page in byte
      */
-    public static final long PAGE_SIZE = 4096; //4kB
+    public static final int PAGE_SIZE = 4096; //4kB
+
+    public static final int LRU_REPLACER_K = 10;
 }
