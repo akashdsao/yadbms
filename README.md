@@ -12,7 +12,11 @@ a relational database system.
 - **Buffer Pool**: Manages in-memory pages to optimize disk I/O
   operations. 
   - Problem Statement: https://15445.courses.cs.cmu.edu/fall2024/project1/
+- **Indexing**: B+ Tree indexing for efficient data retrieval.
+  - Problem Statement: https://15445.courses.cs.cmu.edu/fall2024/project2/
 
 ## Functional requirements
 
 - **Disk Based**: Primary storage location is in persistent storage like HDD or SSD
+- **Buffer Pool**: In-memory cache for frequently accessed data
+- **Indexing**: B+ Tree for efficient data retrieval

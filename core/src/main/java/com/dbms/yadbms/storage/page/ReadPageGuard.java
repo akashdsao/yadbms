@@ -5,86 +5,84 @@ import com.dbms.yadbms.buffer.replacer.LRUKReplacer;
 import com.dbms.yadbms.config.PageId;
 import com.dbms.yadbms.storage.disk.DiskRequest;
 import com.dbms.yadbms.storage.disk.DiskScheduler;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.Getter;
 
-import java.util.concurrent.locks.ReentrantLock;
+public class ReadPageGuard implements AutoCloseable {
 
+  /**
+   * The frame that holds the page this guard is protecting. Almost all operations of this page
+   * guard should be done via this shared pointer to a `FrameHeader`.
+   */
+  private final FrameHeader frame;
 
-public class ReadPageGuard implements AutoCloseable{
+  /** The page ID of the page we are guarding. */
+  @Getter private final PageId pageId;
 
-    /**
-     * The frame that holds the page this guard is protecting.
-     * Almost all operations of this page guard should be done via this shared pointer to a `FrameHeader`.
-     */
-    private final FrameHeader frame;
+  /**
+   * Since the buffer pool cannot know when this `WritePageGuard` gets destructed, we the buffer
+   * pool's latch for when we need to update the frame's eviction state in the buffer pool replacer.
+   */
+  private final ReentrantLock bpmLatch;
 
-    /**
-     * The page ID of the page we are guarding.
-     * */
-    @Getter
-    private final PageId pageId;
+  /**
+   * Since the buffer pool cannot know when this `WritePageGuard` gets destructed, we the buffer
+   * pool's replacer in order to set the frame as evictable on destruction.
+   */
+  private final LRUKReplacer replacer;
 
+  /** Used when flushing pages to disk. */
+  private final DiskScheduler diskScheduler;
 
-    /**
-     * Since the buffer pool cannot know when this `WritePageGuard` gets destructed, we the buffer
-     * pool's latch for when we need to update the frame's eviction state in the buffer pool replacer.
-     */
-    private final ReentrantLock bpmLatch;
+  public ReadPageGuard(
+      FrameHeader frame,
+      PageId pageId,
+      ReentrantLock bpmLatch,
+      LRUKReplacer replacer,
+      DiskScheduler diskScheduler) {
+    this.frame = frame;
+    this.pageId = pageId;
+    this.bpmLatch = bpmLatch;
+    this.replacer = replacer;
+    this.diskScheduler = diskScheduler;
+    frame.readLock().lock();
+    frame.setPinCount(1);
+  }
 
-    /**
-     * Since the buffer pool cannot know when this `WritePageGuard` gets destructed, we the buffer
-     * pool's replacer in order to set the frame as evictable on destruction.
-     */
-    private final LRUKReplacer replacer;
+  public byte[] getData() {
+    return frame.getData();
+  }
 
-    /**
-     * Used when flushing pages to disk.
-     */
-    private final DiskScheduler diskScheduler;
-
-    public ReadPageGuard(FrameHeader frame, PageId pageId, ReentrantLock bpmLatch, LRUKReplacer replacer, DiskScheduler diskScheduler) {
-        this.frame = frame;
-        this.pageId = pageId;
-        this.bpmLatch = bpmLatch;
-        this.replacer = replacer;
-        this.diskScheduler = diskScheduler;
-        frame.readLock().lock();
-        frame.setPinCount(1);
+  public void drop() {
+    bpmLatch.lock();
+    try {
+      if (frame.unPin() == 0) {
+        replacer.setEvictable(frame.getFrameId(), true);
+      }
+    } finally {
+      bpmLatch.unlock();
     }
 
-    public byte[] getData() {
-        return frame.getData();
+    frame.readLock().unlock();
+  }
+
+  public boolean isDirty() {
+    return frame.isDirty();
+  }
+
+  public void flushPage() {
+    if (!frame.isDirty()) {
+      return;
     }
 
-    public void drop() {
-        bpmLatch.lock();
-        try {
-            if (frame.unPin() == 0) {
-                replacer.setEvictable(frame.getFrameId(), true);
-            }
-        } finally {
-            bpmLatch.unlock();
-        }
+    DiskRequest request =
+        DiskRequest.builder().isWrite(true).data(frame.getData()).pageId(pageId).build();
+    diskScheduler.schedule(request);
+    frame.clearDirty();
+  }
 
-        frame.readLock().unlock();
-    }
-
-    public boolean isDirty() {
-        return frame.isDirty();
-    }
-
-    public void flushPage() {
-        if(!frame.isDirty()){
-            return;
-        }
-
-        DiskRequest request = DiskRequest.builder().isWrite(true).data(frame.getData()).pageId(pageId).build();
-        diskScheduler.schedule(request);
-        frame.clearDirty();
-    }
-
-    @Override
-    public void close() throws Exception {
-        drop();
-    }
+  @Override
+  public void close() throws Exception {
+    drop();
+  }
 }
