@@ -75,6 +75,33 @@ public final class BPlusTreeInternalPage<K> extends BPlusTreePage {
     if (getSize() == 0) setSize(1);
   }
 
+  /**
+   * Choose the child pointer for 'key' using BusTub's internal node layout. keys valid at
+   * [1..size-1]; children at [0..size-1]. Returns child index 'idx' where idx = max{ j | key >=
+   * keyAt(j) } with j in [1..size-1], default 0.
+   */
+  public PageId getChildForKey(K key) {
+    final int size = getSize(); // number of children
+    if (size <= 0) {
+      throw new DBException(ErrorType.INDEX_NOT_FOUND, "Corrupt internal page: size <= 0");
+    }
+
+    int lo = 1, hi = size - 1; // search over valid keys
+    int idx = 0; // default to leftmost child
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      K midKey = keyAt(mid);
+      int c = cmp.compare(key, midKey);
+      if (c < 0) {
+        hi = mid - 1;
+      } else {
+        idx = mid; // key >= keyAt(mid) → go right; remember candidate
+        lo = mid + 1;
+      }
+    }
+    return valueAt(idx);
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("(");

@@ -1,6 +1,6 @@
 package com.dbms.yadbms.buffer;
 
-import static com.dbms.yadbms.config.Constants.PAGE_SIZE;
+import static com.dbms.yadbms.common.utils.Constants.PAGE_SIZE;
 
 import com.dbms.yadbms.config.FrameId;
 import com.dbms.yadbms.config.PageId;

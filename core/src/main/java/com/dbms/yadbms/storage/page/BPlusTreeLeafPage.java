@@ -1,6 +1,6 @@
 package com.dbms.yadbms.storage.page;
 
-import static com.dbms.yadbms.config.Constants.INVALID_PAGE_ID;
+import static com.dbms.yadbms.common.utils.Constants.INVALID_PAGE_ID;
 
 import com.dbms.yadbms.common.exceptions.DBException;
 import com.dbms.yadbms.common.exceptions.ErrorType;
@@ -9,7 +9,7 @@ import java.util.Comparator;
 import lombok.Getter;
 import lombok.Setter;
 
-public final class BPlusTreeLeafPage<K> extends BPlusTreePage {
+public final class BPlusTreeLeafPage<K, V> extends BPlusTreePage {
 
   private final Object[] keys;
   private final RecordId[] rids; // RecordId pairs (pageId, slotNumber)
@@ -144,6 +144,13 @@ public final class BPlusTreeLeafPage<K> extends BPlusTreePage {
       else lo = mid + 1;
     }
     return lo;
+  }
+
+  /** Get record at a given rid index. */
+  public V getRecord(int index) {
+    @SuppressWarnings("unchecked")
+    V value = (V) ridAt(index);
+    return value;
   }
 
   @Override

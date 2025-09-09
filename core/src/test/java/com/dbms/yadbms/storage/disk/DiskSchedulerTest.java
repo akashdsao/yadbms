@@ -1,6 +1,6 @@
 package com.dbms.yadbms.storage.disk;
 
-import static com.dbms.yadbms.config.Constants.PAGE_SIZE;
+import static com.dbms.yadbms.common.utils.Constants.PAGE_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

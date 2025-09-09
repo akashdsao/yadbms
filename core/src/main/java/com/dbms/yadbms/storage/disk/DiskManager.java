@@ -1,7 +1,7 @@
 package com.dbms.yadbms.storage.disk;
 
-import static com.dbms.yadbms.config.Constants.DEFAULT_DB_IO_SIZE;
-import static com.dbms.yadbms.config.Constants.PAGE_SIZE;
+import static com.dbms.yadbms.common.utils.Constants.DEFAULT_DB_IO_SIZE;
+import static com.dbms.yadbms.common.utils.Constants.PAGE_SIZE;
 
 import com.dbms.yadbms.common.exceptions.DBException;
 import com.dbms.yadbms.common.exceptions.ErrorType;

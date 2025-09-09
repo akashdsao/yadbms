@@ -1,6 +1,6 @@
 package com.dbms.yadbms.storage.page;
 
-import static com.dbms.yadbms.config.Constants.INVALID_PAGE_ID;
+import static com.dbms.yadbms.common.utils.Constants.INVALID_PAGE_ID;
 
 import com.dbms.yadbms.config.PageId;
 import lombok.Data;

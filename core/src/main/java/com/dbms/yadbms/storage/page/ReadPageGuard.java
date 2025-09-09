@@ -2,6 +2,7 @@ package com.dbms.yadbms.storage.page;
 
 import com.dbms.yadbms.buffer.FrameHeader;
 import com.dbms.yadbms.buffer.replacer.LRUKReplacer;
+import com.dbms.yadbms.common.serializer.KryoSerializer;
 import com.dbms.yadbms.config.PageId;
 import com.dbms.yadbms.storage.disk.DiskRequest;
 import com.dbms.yadbms.storage.disk.DiskScheduler;
@@ -33,6 +34,9 @@ public class ReadPageGuard implements AutoCloseable {
 
   /** Used when flushing pages to disk. */
   private final DiskScheduler diskScheduler;
+
+  /** Used to serialize object to the wanted types. */
+  private final KryoSerializer serializer = KryoSerializer.getInstance();
 
   public ReadPageGuard(
       FrameHeader frame,
@@ -79,6 +83,10 @@ public class ReadPageGuard implements AutoCloseable {
         DiskRequest.builder().isWrite(true).data(frame.getData()).pageId(pageId).build();
     diskScheduler.schedule(request);
     frame.clearDirty();
+  }
+
+  public <T> T getDataAs(Class<T> type) {
+    return serializer.fromBytes(frame.getData(), type);
   }
 
   @Override

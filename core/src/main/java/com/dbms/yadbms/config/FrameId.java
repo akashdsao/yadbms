@@ -1,6 +1,6 @@
 package com.dbms.yadbms.config;
 
-import static com.dbms.yadbms.config.Constants.DEFAULT_FRAME_ID;
+import static com.dbms.yadbms.common.utils.Constants.DEFAULT_FRAME_ID;
 
 /**
  * FrameId represents a unique identifier for a frame in the buffer pool. It encapsulates an Integer

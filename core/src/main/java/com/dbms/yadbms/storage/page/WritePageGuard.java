@@ -2,6 +2,7 @@ package com.dbms.yadbms.storage.page;
 
 import com.dbms.yadbms.buffer.FrameHeader;
 import com.dbms.yadbms.buffer.replacer.LRUKReplacer;
+import com.dbms.yadbms.common.serializer.KryoSerializer;
 import com.dbms.yadbms.config.PageId;
 import com.dbms.yadbms.storage.disk.DiskRequest;
 import com.dbms.yadbms.storage.disk.DiskScheduler;
@@ -15,6 +16,7 @@ public class WritePageGuard implements AutoCloseable {
   private final ReentrantLock bpmLatch;
   private final LRUKReplacer replacer;
   private final DiskScheduler diskScheduler;
+  private final KryoSerializer serializer = KryoSerializer.getInstance();
 
   public WritePageGuard(
       FrameHeader frame,
@@ -33,8 +35,8 @@ public class WritePageGuard implements AutoCloseable {
   }
 
   /** Direct access to mutable page data */
-  public byte[] getDataMut() {
-    return frame.getData();
+  public <T> T asMut(Class<T> type) {
+    return serializer.fromBytes(frame.getData(), type);
   }
 
   public boolean isDirty() {
