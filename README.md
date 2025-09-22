@@ -14,6 +14,9 @@ a relational database system.
   - Problem Statement: https://15445.courses.cs.cmu.edu/fall2024/project1/
 - **Indexing**: B+ Tree indexing for efficient data retrieval.
   - Problem Statement: https://15445.courses.cs.cmu.edu/fall2024/project2/
+- **Query Execution**: Basic operator executors that execute SQL queries and optimizer rules to
+  transform query plans.
+  - Problem Statement: https://15445.courses.cs.cmu.edu/spring2025/project3/
 
 ## Functional requirements
 

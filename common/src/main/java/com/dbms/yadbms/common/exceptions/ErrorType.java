@@ -12,7 +12,10 @@ public enum ErrorType {
   INVALID_OPERATION("INVALID_OPERATION", "The operation is not valid in the current context."),
   EVICTION_FAILED_ERROR("EVICTION_FAILED_ERROR", "Failed to evict the frame from the buffer pool."),
   INVALID_PAGE_ID("INVALID_PAGE_ID", "The provided page ID is invalid."),
-  INDEX_NOT_FOUND("INDEX_NOT_FOUND", "The specified index was not found.");
+  INDEX_NOT_FOUND("INDEX_NOT_FOUND", "The specified index was not found."),
+  OUT_OF_RANGE("OUT_OF_RANGE", "value overflown"),
+  DIVIDE_BY_ZERO("DIVIDE_BY_ZERO", "Division by zero"),
+  UNSUPPORTED_OPERATION("UNSUPPORTED_OPERATION", "Operation unsupported");
 
   private final String code;
   private final String defaultMessage;
