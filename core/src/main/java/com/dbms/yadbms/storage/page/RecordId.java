@@ -14,6 +14,11 @@ public class RecordId {
   private PageId pageId = PageId.store(INVALID_PAGE_ID);
   private int slotNumber = 0;
 
+  public  RecordId(PageId pageId, int slotNumber){
+    this.pageId = pageId;
+    this.slotNumber = slotNumber;
+  }
+
   @Override
   public String toString() {
     return "RecordId{" + "pageId=" + pageId + ", slotNumber=" + slotNumber + '}';

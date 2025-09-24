@@ -21,13 +21,13 @@ class TupleTest {
     Tuple t = new Tuple(List.of(v), schema);
     assertEquals((byte) 123, t.getValue(schema, 0).asTinyInt());
 
-//    Tuple t2 = serAndDeSer(t);
-//    assertEquals((byte) 123, t2.getValue(schema, 0).asTinyInt());
+    Tuple t2 = serAndDeSer(t);
+    assertEquals((byte) 123, t2.getValue(schema, 0).asTinyInt());
   }
 
   @Test
   void testSmallInt() {
-    Schema schema = new Schema(List.of(new Column("c1", TypeId.SMALLINT)));
+    Schema schema = new Schema(List.of(new Column("col", TypeId.SMALLINT)));
     Value v = new Value(TypeId.SMALLINT, (short) 12345);
 
     Tuple t = new Tuple(List.of(v), schema);
@@ -39,7 +39,7 @@ class TupleTest {
 
   @Test
   void testInteger() {
-    Schema schema = new Schema(List.of(new Column("c1", TypeId.INTEGER)));
+    Schema schema = new Schema(List.of(new Column("col", TypeId.INTEGER)));
     Value v = new Value(TypeId.INTEGER, 123456);
 
     Tuple t = new Tuple(List.of(v), schema);
@@ -51,7 +51,7 @@ class TupleTest {
 
   @Test
   void testBigInt() {
-    Schema schema = new Schema(List.of(new Column("c1", TypeId.BIGINT)));
+    Schema schema = new Schema(List.of(new Column("col", TypeId.BIGINT)));
     Value v = new Value(TypeId.BIGINT, 1234567890123L);
 
     Tuple t = new Tuple(List.of(v), schema);
@@ -63,7 +63,7 @@ class TupleTest {
 
   @Test
   void testDecimal() {
-    Schema schema = new Schema(List.of(new Column("c1", TypeId.DECIMAL)));
+    Schema schema = new Schema(List.of(new Column("col", TypeId.DECIMAL)));
     Value v = new Value(TypeId.DECIMAL, 123.456);
 
     Tuple t = new Tuple(List.of(v), schema);
@@ -75,7 +75,7 @@ class TupleTest {
 
   @Test
   void testBoolean() {
-    Schema schema = new Schema(List.of(new Column("c1", TypeId.BOOLEAN)));
+    Schema schema = new Schema(List.of(new Column("col", TypeId.BOOLEAN)));
     Value v = new Value(TypeId.BOOLEAN, true);
 
     Tuple t = new Tuple(List.of(v), schema);
@@ -87,7 +87,7 @@ class TupleTest {
 
   @Test
   void testVarchar() {
-    Schema schema = new Schema(List.of(new Column("c1", TypeId.VARCHAR, 100)));
+    Schema schema = new Schema(List.of(new Column("col", TypeId.VARCHAR, 100)));
     Value v = new Value(TypeId.VARCHAR, "Alice");
 
     Tuple t = new Tuple(List.of(v), schema);
@@ -99,7 +99,7 @@ class TupleTest {
 
   @Test
   void testVector() {
-    Schema schema = new Schema(List.of(new Column("c1", TypeId.VECTOR, 3)));
+    Schema schema = new Schema(List.of(new Column("col", TypeId.VECTOR, 3)));
     Value v = new Value(TypeId.VECTOR, new double[] {1.1, 2.2, 3.3});
 
     Tuple t = new Tuple(List.of(v), schema);

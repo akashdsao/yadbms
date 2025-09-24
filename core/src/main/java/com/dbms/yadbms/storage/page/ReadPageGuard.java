@@ -89,8 +89,13 @@ public class ReadPageGuard implements AutoCloseable {
     return serializer.fromBytes(frame.getData(), type);
   }
 
+  /** Direct access to mutable page data */
+  public <T> T asMut(Class<T> type) {
+    return serializer.fromBytes(frame.getData(), type);
+  }
+
   @Override
-  public void close() throws Exception {
+  public void close() {
     drop();
   }
 }

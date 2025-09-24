@@ -341,6 +341,7 @@ public class TinyIntType extends IntegerParentType {
 
   @Override
   public void serializeTo(Value val, byte[] storage, int offset) {
+
     ByteBuffer.wrap(storage, offset, 1)
         .order(ByteOrder.BIG_ENDIAN)
         .put(val.asTinyInt());

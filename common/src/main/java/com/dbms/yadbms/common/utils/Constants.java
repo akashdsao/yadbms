@@ -13,4 +13,7 @@ public final class Constants {
   public static final int LRU_REPLACER_K = 10;
 
   public static final int INTERNAL_PAGE_SIZE = 32;
+
+  public static final int TABLE_PAGE_HEADER_SIZE = 24; // can adjust as needed
+  public static final int TUPLE_INFO_SIZE = 16 + 4 + 4; // offset(4) + size(4) + meta(16)
 }

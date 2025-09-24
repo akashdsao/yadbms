@@ -3,6 +3,8 @@ package com.dbms.yadbms.buffer;
 import static com.dbms.yadbms.common.utils.Constants.LRU_REPLACER_K;
 
 import com.dbms.yadbms.buffer.replacer.LRUKReplacer;
+import com.dbms.yadbms.common.exceptions.DBException;
+import com.dbms.yadbms.common.exceptions.ErrorType;
 import com.dbms.yadbms.config.FrameId;
 import com.dbms.yadbms.config.PageId;
 import com.dbms.yadbms.storage.disk.DiskManager;
@@ -128,13 +130,13 @@ public class BufferPoolManager {
   }
 
   /** Allocate a brand-new, zeroed page and return a write guard pinned to it. */
-  public Optional<WritePageGuard> newPage() {
+  public PageId newPage() {
     bpmLock.lock();
     try {
       Optional<FrameId> acquireFrameId = acquireFrameId();
       if (acquireFrameId.isEmpty()) {
         log.error("All frames pinned; can't allocate new page");
-        return Optional.empty();
+        System.exit(1);
       }
 
       FrameId fid = acquireFrameId.get();
@@ -153,7 +155,7 @@ public class BufferPoolManager {
       pageTable.put(newPid, fid);
       touchForUse(fid);
 
-      return Optional.of(new WritePageGuard(frameHeader, newPid, bpmLock, replacer, diskScheduler));
+      return newPid;
     } finally {
       bpmLock.unlock();
     }
@@ -188,5 +190,36 @@ public class BufferPoolManager {
   private void touchForUse(FrameId frameId) {
     replacer.recordAccess(frameId);
     replacer.setEvictable(frameId, false);
+  }
+
+  /**
+   * A wrapper around `CheckedWritePage` that unwraps the inner value if it exists.
+   *
+   * <p>If `CheckedWritePage` returns a null pointer it raises an expection and break the process.
+   *
+   * @param pageId The ID of the page we want to read.
+   * @return WritePageGuard A page guard ensuring exclusive and mutable access to a page's data.
+   */
+  public WritePageGuard writePage(PageId pageId) {
+    Optional<WritePageGuard> writePageGuard = checkedPageWrite(pageId);
+    if (writePageGuard.isEmpty()) {
+      throw new DBException(ErrorType.IO_ERROR, "Write page failed for pageId " + pageId);
+    }
+    return writePageGuard.get();
+  }
+
+  /**
+   * A wrapper around `CheckedReadPage` that unwraps the inner value if it exists.
+   * If`CheckedReadPage` returns a null pointer, it raises an exception and breaks the process.
+   *
+   * @param pageId The ID of the page we want to read.
+   * @return ReadPageGuard A page guard ensuring shared and read-only access to a page's data.
+   */
+  public ReadPageGuard readPage(PageId pageId) {
+    Optional<ReadPageGuard> readPageGuard = checkedReadPage(pageId);
+    if (readPageGuard.isEmpty()) {
+      throw new DBException(ErrorType.IO_ERROR, "Read page failed for pageId " + pageId);
+    }
+    return readPageGuard.get();
   }
 }

@@ -14,7 +14,6 @@ import com.dbms.yadbms.storage.page.ReadPageGuard;
 import com.dbms.yadbms.storage.page.WritePageGuard;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,7 +42,7 @@ public class BPlusTree<K> {
     this.internalMaxSize = internalMaxSize;
 
     // Initialize header root pointer as INVALID on first open/creation
-    try (WritePageGuard g = mustWrite(headerPageId)) {
+    try (WritePageGuard g = bufferPoolManager.writePage(headerPageId)) {
       BPlusTreeHeaderPage header = g.asMut(BPlusTreeHeaderPage.class);
       if (header.getRootPageId() == null) {
         header.setRootPageId(PageId.store(INVALID_PAGE_ID));
@@ -54,7 +53,7 @@ public class BPlusTree<K> {
   }
 
   public PageId getRootPageId() {
-    try (ReadPageGuard g = mustRead(headerPageId)) {
+    try (ReadPageGuard g = bufferPoolManager.readPage(headerPageId)) {
       BPlusTreeHeaderPage h = g.getDataAs(BPlusTreeHeaderPage.class);
       return h.getRootPageId();
     } catch (Exception e) {
@@ -77,7 +76,7 @@ public class BPlusTree<K> {
 
     PageId pid = root;
     while (true) {
-      try (ReadPageGuard guard = mustRead(pid)) {
+      try (ReadPageGuard guard = bufferPoolManager.readPage(pid)) {
         BPlusTreePage pageHdr = guard.getDataAs(BPlusTreePage.class);
 
         if (pageHdr.isLeafPage()) {
@@ -111,7 +110,7 @@ public class BPlusTree<K> {
     // Descend to target leaf
     PageId pid = getRootPageId();
     while (true) {
-      try (ReadPageGuard rg = mustRead(pid)) {
+      try (ReadPageGuard rg = bufferPoolManager.readPage(pid)) {
         BPlusTreePage hdr = rg.getDataAs(BPlusTreePage.class);
         if (hdr.isLeafPage()) break;
         @SuppressWarnings("unchecked")
@@ -123,7 +122,7 @@ public class BPlusTree<K> {
     }
 
     // Insert into leaf
-    try (WritePageGuard lg = mustWrite(pid)) {
+    try (WritePageGuard lg = bufferPoolManager.writePage(pid)) {
       @SuppressWarnings("unchecked")
       BPlusTreeLeafPage<K, V> leaf = lg.asMut(BPlusTreeLeafPage.class);
 
@@ -156,7 +155,7 @@ public class BPlusTree<K> {
     // Descend to leaf
     PageId pid = getRootPageId();
     while (true) {
-      try (ReadPageGuard rg = mustRead(pid)) {
+      try (ReadPageGuard rg = bufferPoolManager.readPage(pid)) {
         BPlusTreePage hdr = rg.getDataAs(BPlusTreePage.class);
         if (hdr.isLeafPage()) break;
         @SuppressWarnings("unchecked")
@@ -168,7 +167,7 @@ public class BPlusTree<K> {
     }
 
     // Delete in leaf
-    try (WritePageGuard lg = mustWrite(pid)) {
+    try (WritePageGuard lg = bufferPoolManager.writePage(pid)) {
       @SuppressWarnings("unchecked")
       BPlusTreeLeafPage<K, Object> leaf = lg.asMut(BPlusTreeLeafPage.class);
       int idx = leaf.findKey(key);
@@ -179,7 +178,7 @@ public class BPlusTree<K> {
       // Root-only leaf special case → if empty, clear header
       if (pid.equals(getRootPageId())) {
         if (leaf.getSize() == 0) {
-          try (WritePageGuard hg = mustWrite(headerPageId)) {
+          try (WritePageGuard hg = bufferPoolManager.writePage(headerPageId)) {
             BPlusTreeHeaderPage h = hg.asMut(BPlusTreeHeaderPage.class);
             h.setRootPageId(PageId.store(INVALID_PAGE_ID));
           }
@@ -203,14 +202,15 @@ public class BPlusTree<K> {
 
   /** Bootstrap a brand-new tree: create a root leaf and publish header rootPageId. */
   private <V> void startNewTree(K key, V value) {
-    try (WritePageGuard lg = mustNewLeafPage()) {
-      PageId newRootPid = lg.getPageId(); // <-- adapt if your guard exposes page id differently
-      @SuppressWarnings("unchecked")
-      BPlusTreeLeafPage<K, V> root = lg.asMut(BPlusTreeLeafPage.class);
-      root.init(leafMaxSize);
-      root.insertSorted(key, castRecord(value));
-
-      try (WritePageGuard hg = mustWrite(headerPageId)) {
+    try {
+      PageId newRootPid = bufferPoolManager.newPage();
+      try (WritePageGuard newRootPage = bufferPoolManager.writePage(newRootPid)) {
+        @SuppressWarnings("unchecked")
+        BPlusTreeLeafPage<K, V> root = newRootPage.asMut(BPlusTreeLeafPage.class);
+        root.init(leafMaxSize);
+        root.insertSorted(key, castRecord(value));
+      }
+      try (WritePageGuard hg = bufferPoolManager.writePage(headerPageId)) {
         BPlusTreeHeaderPage header = hg.asMut(BPlusTreeHeaderPage.class);
         header.setRootPageId(newRootPid);
       }
@@ -223,11 +223,10 @@ public class BPlusTree<K> {
   private <V> SplitLeafResult<K> splitLeaf(PageId leftPid, BPlusTreeLeafPage<K, V> leftLeaf)
       throws Exception {
     // Allocate right leaf
-    PageId rightPid;
-    BPlusTreeLeafPage<K, V> rightLeaf;
-    try (WritePageGuard rg = mustNewLeafPage()) {
-      rightPid = rg.getPageId();
-      rightLeaf = rg.asMut(BPlusTreeLeafPage.class);
+    PageId rightPid = bufferPoolManager.newPage();
+    try (WritePageGuard newLeafPage = bufferPoolManager.writePage(rightPid)) {
+      @SuppressWarnings("unchecked")
+      BPlusTreeLeafPage<K, V> rightLeaf = newLeafPage.asMut(BPlusTreeLeafPage.class);
       rightLeaf.init(leafMaxSize);
 
       // Move half entries: keep lower half in left, move upper half to right
@@ -261,7 +260,7 @@ public class BPlusTree<K> {
 
   /** After creating right leaf in splitLeaf, fetch its first key safely (read-only). */
   private <V> K rightLeafKeyAtZero(PageId leftPid, PageId rightPid) {
-    try (ReadPageGuard rg = mustRead(rightPid)) {
+    try (ReadPageGuard rg = bufferPoolManager.readPage(rightPid)) {
       @SuppressWarnings("unchecked")
       BPlusTreeLeafPage<K, V> right = rg.getDataAs(BPlusTreeLeafPage.class);
       return right.keyAt(0);
@@ -274,8 +273,8 @@ public class BPlusTree<K> {
   private void insertIntoParent(PageId leftPid, K pushUpKey, PageId rightPid) {
     // If left is root, create a new root internal
     if (leftPid.equals(getRootPageId())) {
-      try (WritePageGuard ig = mustNewInternalPage()) {
-        PageId newRootPid = ig.getPageId();
+      PageId newRootPid = bufferPoolManager.newPage();
+      try (WritePageGuard ig = bufferPoolManager.writePage(newRootPid)) {
         @SuppressWarnings("unchecked")
         BPlusTreeInternalPage<K> root = ig.asMut(BPlusTreeInternalPage.class);
         root.init(internalMaxSize);
@@ -286,7 +285,7 @@ public class BPlusTree<K> {
         root.setValueAt(1, rightPid.getValue());
         root.setSize(2); // children count
 
-        try (WritePageGuard hg = mustWrite(headerPageId)) {
+        try (WritePageGuard hg = bufferPoolManager.writePage(headerPageId)) {
           BPlusTreeHeaderPage h = hg.asMut(BPlusTreeHeaderPage.class);
           h.setRootPageId(newRootPid);
         }
@@ -298,7 +297,7 @@ public class BPlusTree<K> {
 
     // Otherwise, find parent by searching from root (since parent ptrs aren’t stored)
     PageId parentPid = findParentOf(leftPid);
-    try (WritePageGuard pg = mustWrite(parentPid)) {
+    try (WritePageGuard pg = bufferPoolManager.writePage(parentPid)) {
       @SuppressWarnings("unchecked")
       BPlusTreeInternalPage<K> parent = pg.asMut(BPlusTreeInternalPage.class);
 
@@ -322,8 +321,8 @@ public class BPlusTree<K> {
     // Minimal safe behavior (without parent pointers / robust redistribution):
     // Re-check root shrink; otherwise, you can leave as is or log for now.
     if (leafPid.equals(getRootPageId())) {
-      try (WritePageGuard hg = mustWrite(headerPageId);
-          WritePageGuard lg = mustWrite(leafPid)) {
+      try (WritePageGuard hg = bufferPoolManager.writePage(headerPageId);
+          WritePageGuard lg = bufferPoolManager.writePage(leafPid)) {
         BPlusTreeHeaderPage h = hg.asMut(BPlusTreeHeaderPage.class);
         @SuppressWarnings("unchecked")
         BPlusTreeLeafPage<K, Object> leaf = lg.asMut(BPlusTreeLeafPage.class);
@@ -352,7 +351,7 @@ public class BPlusTree<K> {
 
     PageId pid = root;
     while (true) {
-      try (ReadPageGuard rg = mustRead(pid)) {
+      try (ReadPageGuard rg = bufferPoolManager.readPage(pid)) {
         BPlusTreePage hdr = rg.getDataAs(BPlusTreePage.class);
         if (hdr.isLeafPage()) break;
 
@@ -416,11 +415,9 @@ public class BPlusTree<K> {
   /** Split an internal page at pid and propagate middle key up. */
   private void splitInternalAndPropagate(PageId leftPid) {
     // Allocate right internal
-    PageId rightPid;
-    try (WritePageGuard lg = mustWrite(leftPid);
-        WritePageGuard rg = mustNewInternalPage()) {
-
-      rightPid = rg.getPageId();
+    PageId rightPid = bufferPoolManager.newPage();
+    try (WritePageGuard lg = bufferPoolManager.writePage(leftPid);
+        WritePageGuard rg = bufferPoolManager.writePage(rightPid)) {
       @SuppressWarnings("unchecked")
       BPlusTreeInternalPage<K> left = lg.asMut(BPlusTreeInternalPage.class);
       @SuppressWarnings("unchecked")
@@ -454,37 +451,6 @@ public class BPlusTree<K> {
     } catch (Exception e) {
       throw new DBException(ErrorType.IO_ERROR, "splitInternalAndPropagate failed", e);
     }
-  }
-
-  // ------------------------- Guard + BPM helpers -------------------------
-
-  private ReadPageGuard mustRead(PageId pid) {
-    Optional<ReadPageGuard> g = bufferPoolManager.checkedReadPage(pid);
-    if (g.isEmpty()) throw new DBException(ErrorType.IO_ERROR, "Unable to read page " + pid);
-    return g.get();
-  }
-
-  private WritePageGuard mustWrite(PageId pid) {
-    Optional<WritePageGuard> g = bufferPoolManager.checkedPageWrite(pid);
-    if (g.isEmpty()) throw new DBException(ErrorType.IO_ERROR, "Unable to write page " + pid);
-    return g.get();
-  }
-
-  /** Allocate a brand-new page and view it as a **leaf**. Adapt to your BPM API. */
-  private WritePageGuard mustNewLeafPage() {
-    // >>> Adapt this to your BufferPoolManager <<<
-    // e.g., Optional<WritePageGuard> g = bufferPoolManager.newPageWrite();
-    Optional<WritePageGuard> g = bufferPoolManager.newPage(); // <-- implement this in BPM
-    if (g.isEmpty()) throw new DBException(ErrorType.IO_ERROR, "Unable to allocate new leaf page");
-    return g.get();
-  }
-
-  /** Allocate a brand-new page and view it as an **internal**. Adapt to your BPM API. */
-  private WritePageGuard mustNewInternalPage() {
-    Optional<WritePageGuard> g = bufferPoolManager.newPage(); // <-- implement this in BPM
-    if (g.isEmpty())
-      throw new DBException(ErrorType.IO_ERROR, "Unable to allocate new internal page");
-    return g.get();
   }
 
   private <V> com.dbms.yadbms.storage.page.RecordId castRecord(V v) {

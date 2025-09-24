@@ -29,6 +29,18 @@ public class Value {
     this.isNull = false;
   }
 
+  public Value(TypeId type, byte i) {
+    this.typeId = type;
+    this.value = i;
+    this.isNull = false;
+  }
+
+  public Value(TypeId type, short i) {
+    this.typeId = type;
+    this.value = i;
+    this.isNull = false;
+  }
+
   public Value(TypeId type, int i) {
     this.typeId = type;
     this.value = i;

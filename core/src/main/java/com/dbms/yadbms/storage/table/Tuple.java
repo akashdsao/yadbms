@@ -1,7 +1,10 @@
 package com.dbms.yadbms.storage.table;
 
+import static com.dbms.yadbms.common.utils.Constants.INVALID_PAGE_ID;
+
 import com.dbms.yadbms.catalog.Column;
 import com.dbms.yadbms.catalog.Schema;
+import com.dbms.yadbms.config.PageId;
 import com.dbms.yadbms.storage.page.RecordId;
 import com.dbms.yadbms.type.Limits;
 import com.dbms.yadbms.type.TypeId;
@@ -10,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
 
 /**
  * -------------------------------------------------------------------------------------------------
@@ -18,20 +22,16 @@ import java.util.List;
  */
 public class Tuple {
   private RecordId recordId;
-  private byte[] data;
+  @Getter private byte[] data;
 
   public Tuple() {
-    this.recordId = new RecordId();
+    this.recordId = new RecordId(PageId.store(INVALID_PAGE_ID), 0);
     this.data = new byte[0];
   }
 
   public Tuple(RecordId rid) {
     this.recordId = rid;
     this.data = new byte[0];
-  }
-
-  public static Tuple empty() {
-    return new Tuple(new RecordId());
   }
 
   public Tuple(List<Value> values, Schema schema) {
@@ -130,5 +130,9 @@ public class Tuple {
     int size = ByteBuffer.wrap(storage, offset, Integer.BYTES).order(ByteOrder.BIG_ENDIAN).getInt();
     this.data = new byte[size];
     System.arraycopy(storage, offset + Integer.BYTES, this.data, 0, size);
+  }
+
+  public int getLength() {
+    return data.length;
   }
 }
